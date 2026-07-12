@@ -419,6 +419,52 @@
       flex-shrink: 0;
     }
 
+    .rekap-summary {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 16px 0 6px;
+    }
+    .rekap-table-wrap { overflow-x: auto; }
+    .rekap-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+      font-size: 13px;
+    }
+    .rekap-table th, .rekap-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid var(--paper-line);
+      text-align: left;
+      white-space: nowrap;
+    }
+    .rekap-table th {
+      font-weight: 600;
+      color: var(--accent-dark);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .rekap-table tbody tr:nth-child(even) { background: #EFEADA; }
+    .print-btn {
+      margin-top: 18px;
+      background: var(--accent-dark);
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 5px;
+      font-size: 13.5px;
+      cursor: pointer;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    @media print {
+      header, nav.tabs, .action-bar, #btnTampilkanRekap, .print-btn { display: none !important; }
+      body { background: #fff; }
+      main { padding: 0; max-width: 100%; }
+      .page { box-shadow: none; background: #fff; }
+      .page::before { display: none; }
+    }
+
     @media (max-width: 380px) {
       .page { padding: 18px 14px 18px 34px; }
       .page::before { left: 20px; }
@@ -454,6 +500,7 @@
   <nav class="tabs">
     <button id="tab-isi" class="active" onclick="showTab('isi')">Isi Jurnal</button>
     <button id="tab-riwayat" onclick="showTab('riwayat')">Riwayat</button>
+    <button id="tab-rekap" onclick="showTab('rekap')">Rekap</button>
   </nav>
 
   <main>
@@ -523,6 +570,43 @@
       <div id="riwayatList"><p class="loading">Memuat riwayat…</p></div>
     </section>
 
+    <!-- ===== TAB: REKAP BULANAN ===== -->
+    <section id="panel-rekap" class="page" style="display:none;">
+      <p class="eyebrow">Laporan kehadiran</p>
+      <p class="tanggal-hari">Rekap Bulanan</p>
+
+      <label for="rekapKelas">Kelas</label>
+      <select id="rekapKelas"><option value="">Pilih kelas…</option></select>
+
+      <div class="row2">
+        <div>
+          <label for="rekapBulan">Bulan</label>
+          <select id="rekapBulan">
+            <option value="1">Januari</option>
+            <option value="2">Februari</option>
+            <option value="3">Maret</option>
+            <option value="4">April</option>
+            <option value="5">Mei</option>
+            <option value="6">Juni</option>
+            <option value="7">Juli</option>
+            <option value="8">Agustus</option>
+            <option value="9">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
+          </select>
+        </div>
+        <div>
+          <label for="rekapTahun">Tahun</label>
+          <input type="number" id="rekapTahun" min="2020" max="2100">
+        </div>
+      </div>
+
+      <button type="button" class="submit" id="btnTampilkanRekap" style="margin-top:18px;">Tampilkan Rekap</button>
+
+      <div id="rekapResult"></div>
+    </section>
+
   </main>
 
   <div class="action-bar" id="actionBar">
@@ -562,10 +646,13 @@
     function showTab(tab) {
       document.getElementById('panel-isi').style.display = tab === 'isi' ? 'block' : 'none';
       document.getElementById('panel-riwayat').style.display = tab === 'riwayat' ? 'block' : 'none';
+      document.getElementById('panel-rekap').style.display = tab === 'rekap' ? 'block' : 'none';
       document.getElementById('tab-isi').classList.toggle('active', tab === 'isi');
       document.getElementById('tab-riwayat').classList.toggle('active', tab === 'riwayat');
+      document.getElementById('tab-rekap').classList.toggle('active', tab === 'rekap');
       document.getElementById('actionBar').style.display = tab === 'isi' ? 'block' : 'none';
       if (tab === 'riwayat') muatRiwayat();
+      if (tab === 'rekap') isiFilterRekapKelas();
     }
 
     function updateLabelHari() {
@@ -940,6 +1027,75 @@
       }).catch(function(err) {
         alert('Gagal menghapus: ' + err.message);
       });
+    }
+
+    function isiFilterRekapKelas() {
+      const sel = document.getElementById('rekapKelas');
+      if (!sel.dataset.filled && daftarKelas.length) {
+        sel.innerHTML = '<option value="">Pilih kelas…</option>' +
+          daftarKelas.map(function(k) { return '<option value="' + escapeHtml(k.kelas) + '">' + escapeHtml(k.kelas) + '</option>'; }).join('');
+        sel.dataset.filled = '1';
+      }
+      if (!document.getElementById('rekapTahun').value) {
+        const now = new Date();
+        document.getElementById('rekapBulan').value = String(now.getMonth() + 1);
+        document.getElementById('rekapTahun').value = now.getFullYear();
+      }
+    }
+
+    function tampilkanRekap() {
+      const kelas = document.getElementById('rekapKelas').value;
+      const bulan = document.getElementById('rekapBulan').value;
+      const tahun = document.getElementById('rekapTahun').value;
+      const resultEl = document.getElementById('rekapResult');
+
+      if (!kelas) {
+        resultEl.innerHTML = '<p class="empty-hint">Pilih kelas dahulu.</p>';
+        return;
+      }
+      resultEl.innerHTML = '<p class="loading">Menghitung rekap…</p>';
+
+      callApi('getRekapBulanan', { kelas: kelas, bulan: bulan, tahun: tahun }).then(function(data) {
+        renderRekap(data);
+      }).catch(function(err) {
+        resultEl.innerHTML = '<p class="empty-hint">Gagal memuat rekap: ' + escapeHtml(err.message) + '</p>';
+      });
+    }
+    document.getElementById('btnTampilkanRekap').addEventListener('click', tampilkanRekap);
+
+    function renderRekap(data) {
+      const resultEl = document.getElementById('rekapResult');
+      const namaBulan = BULAN_ID[data.bulan - 1];
+
+      if (!data.totalPertemuan) {
+        resultEl.innerHTML = '<p class="empty-hint">Belum ada jurnal untuk ' + escapeHtml(data.kelas) + ' di bulan ' + namaBulan + ' ' + data.tahun + '.</p>';
+        return;
+      }
+      if (!data.siswa.length) {
+        resultEl.innerHTML = '<p class="empty-hint">Belum ada siswa terdaftar untuk kelas ini di sheet "Siswa".</p>';
+        return;
+      }
+
+      const rows = data.siswa.map(function(s, i) {
+        const persenHadir = data.totalPertemuan ? Math.round((s.Hadir / data.totalPertemuan) * 100) : 0;
+        return '<tr>' +
+          '<td>' + (s.noAbsen || (i + 1)) + '</td>' +
+          '<td>' + escapeHtml(s.nama) + '</td>' +
+          '<td>' + s.Hadir + '</td>' +
+          '<td>' + s.Izin + '</td>' +
+          '<td>' + s.Sakit + '</td>' +
+          '<td>' + s.Dispensasi + '</td>' +
+          '<td>' + s.Alpa + '</td>' +
+          '<td>' + persenHadir + '%</td>' +
+        '</tr>';
+      }).join('');
+
+      resultEl.innerHTML =
+        '<p class="rekap-summary">' + escapeHtml(data.kelas) + ' — ' + namaBulan + ' ' + data.tahun + ' · Total pertemuan: ' + data.totalPertemuan + ' kali</p>' +
+        '<div class="rekap-table-wrap"><table class="rekap-table"><thead><tr>' +
+          '<th>No</th><th>Nama</th><th>H</th><th>I</th><th>S</th><th>D</th><th>A</th><th>% Hadir</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        '<button type="button" class="print-btn" onclick="window.print()">🖨️ Cetak / Simpan sebagai PDF</button>';
     }
 
     initTanggal();
