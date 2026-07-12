@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#1E2B22">
   <link rel="icon" href="/icon-192.png" type="image/png">
@@ -40,9 +41,21 @@
     header {
       background: var(--ink);
       color: var(--paper);
-      padding: 22px 20px 18px;
+      padding: calc(18px + env(safe-area-inset-top)) 20px 18px;
       text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
+
+    header img {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      flex-shrink: 0;
+    }
+
+    header .header-text { min-width: 0; }
 
     header h1 {
       font-family: 'Fraunces', serif;
@@ -69,13 +82,14 @@
       background: none;
       border: none;
       color: #CFE0D3;
-      padding: 12px 8px;
+      padding: 15px 8px;
       font-family: 'IBM Plex Sans', sans-serif;
-      font-size: 14px;
+      font-size: 14.5px;
       font-weight: 500;
       cursor: pointer;
       border-bottom: 3px solid transparent;
       transition: 0.15s;
+      -webkit-tap-highlight-color: transparent;
     }
 
     nav.tabs button.active {
@@ -86,7 +100,7 @@
     main {
       max-width: 640px;
       margin: 0 auto;
-      padding: 18px 14px 60px;
+      padding: 18px 14px calc(130px + env(safe-area-inset-bottom));
     }
 
     .page {
@@ -146,8 +160,8 @@
     textarea {
       width: 100%;
       font-family: 'IBM Plex Sans', sans-serif;
-      font-size: 14px;
-      padding: 9px 10px;
+      font-size: 16px;
+      padding: 11px 10px;
       border: 1px solid var(--rule);
       border-radius: 4px;
       background: #fff;
@@ -190,15 +204,16 @@
     .status-group label {
       margin: 0;
       font-weight: 400;
-      font-size: 12.5px;
+      font-size: 13px;
       display: flex;
       align-items: center;
       gap: 4px;
-      padding: 5px 9px;
+      padding: 8px 12px;
       border: 1px solid var(--rule);
       border-radius: 20px;
       cursor: pointer;
       background: #fff;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .status-group input { display: none; }
@@ -223,7 +238,7 @@
     }
 
     button.submit {
-      margin-top: 22px;
+      margin-top: 0;
       width: 100%;
       background: var(--accent-dark);
       color: #fff;
@@ -304,13 +319,37 @@
     }
 
     .loading { font-size: 13px; color: var(--muted); padding: 12px 0; }
+
+    @media (max-width: 380px) {
+      .page { padding: 18px 14px 18px 34px; }
+      .page::before { left: 20px; }
+      header h1 { font-size: 22px; }
+      header img { width: 32px; height: 32px; }
+      .tanggal-hari { font-size: 18px; }
+    }
+
+    .action-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--paper);
+      border-top: 1px solid var(--paper-line);
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      box-shadow: 0 -6px 20px rgba(0,0,0,0.18);
+      z-index: 20;
+    }
+    .action-bar .toast { margin-top: 0; margin-bottom: 10px; }
   </style>
 </head>
 <body>
 
   <header>
-    <h1>Jurnal Mengajar</h1>
-    <p>Catatan harian pembelajaran & kehadiran siswa</p>
+    <img src="/icon-192.png" alt="">
+    <div class="header-text">
+      <h1>Jurnal Mengajar</h1>
+      <p>Catatan harian pembelajaran & kehadiran siswa</p>
+    </div>
   </header>
 
   <nav class="tabs">
@@ -334,10 +373,10 @@
       <label>Jam ke- <span style="font-weight:400;color:var(--muted);">(isi "sampai" hanya jika KBM lebih dari 1 JP)</span></label>
       <div class="row2">
         <div>
-          <input type="number" id="jamDari" min="1" max="12" placeholder="Dari, contoh: 1">
+          <input type="number" inputmode="numeric" id="jamDari" min="1" max="12" placeholder="Dari, mis. 1">
         </div>
         <div>
-          <input type="number" id="jamSampai" min="1" max="12" placeholder="Sampai (opsional), contoh: 3">
+          <input type="number" inputmode="numeric" id="jamSampai" min="1" max="12" placeholder="Sampai, mis. 3">
         </div>
       </div>
 
@@ -352,8 +391,6 @@
         <p class="empty-hint">Pilih kelas dahulu untuk memuat daftar siswa.</p>
       </div>
 
-      <button class="submit" id="btnSimpan" onclick="simpan()">Simpan Jurnal</button>
-      <div class="toast" id="toast"></div>
     </section>
 
     <!-- ===== TAB: RIWAYAT ===== -->
@@ -365,13 +402,18 @@
 
   </main>
 
+  <div class="action-bar" id="actionBar">
+    <div class="toast" id="toast"></div>
+    <button class="submit" id="btnSimpan" onclick="simpan()">Simpan Jurnal</button>
+  </div>
+
   <script>
     // ================== KONFIGURASI ==================
     // Tidak lagi manggil Google langsung dari browser (supaya tidak kena CORS).
     // Sebagai gantinya, panggil endpoint /api di domain sendiri, yang diteruskan oleh worker.js ke Apps Script.
     const APPS_SCRIPT_URL = '/api';
     // Harus SAMA PERSIS dengan API_KEY yang ada di Code.gs
-    const API_KEY = 'dimest85haysnaidrun';
+    const API_KEY = 'GANTI-DENGAN-KUNCI-RAHASIA-ANDA-12345';
     // ====================================================
 
     function callApi(action, extra) {
@@ -397,6 +439,7 @@
       document.getElementById('panel-riwayat').style.display = tab === 'riwayat' ? 'block' : 'none';
       document.getElementById('tab-isi').classList.toggle('active', tab === 'isi');
       document.getElementById('tab-riwayat').classList.toggle('active', tab === 'riwayat');
+      document.getElementById('actionBar').style.display = tab === 'isi' ? 'block' : 'none';
       if (tab === 'riwayat') muatRiwayat();
     }
 
