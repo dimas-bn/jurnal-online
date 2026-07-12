@@ -359,12 +359,13 @@
   </main>
 
   <script>
-    // ================== KONFIGURASI — ISI SEBELUM DEPLOY ==================
-    // URL Web App Apps Script Anda (dari Deploy > Manage deployments), harus diakhiri /exec
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPdKVqnAlQNlo_-bRQzITg1J4XwszzJlJB877r0KrynxLaaj5-5uQ-rBYOzTE39RuTiw/exec';
+    // ================== KONFIGURASI ==================
+    // Tidak lagi manggil Google langsung dari browser (supaya tidak kena CORS).
+    // Sebagai gantinya, panggil endpoint /api di domain sendiri, yang diteruskan oleh worker.js ke Apps Script.
+    const APPS_SCRIPT_URL = '/api';
     // Harus SAMA PERSIS dengan API_KEY yang ada di Code.gs
     const API_KEY = 'dimest85haysnaidrun';
-    // ========================================================================
+    // ====================================================
 
     function callApi(action, extra) {
       const body = Object.assign({ action: action, key: API_KEY }, extra || {});
