@@ -339,6 +339,41 @@
     }
     .no-match { font-size: 13px; color: var(--muted); font-style: italic; padding: 10px 0; }
 
+    .jadwal-suggest {
+      margin-top: 14px;
+      padding: 10px 12px;
+      background: #EFEADA;
+      border: 1px dashed var(--rule);
+      border-radius: 6px;
+    }
+    .jadwal-label {
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin: 0 0 8px;
+    }
+    .jadwal-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .jadwal-chip {
+      background: var(--accent-dark);
+      color: #fff;
+      border: none;
+      font-size: 12.5px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      padding: 7px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+    .jadwal-chip.used {
+      background: #fff;
+      color: var(--muted);
+      border: 1px solid var(--rule);
+    }
+
     @media (max-width: 380px) {
       .page { padding: 18px 14px 18px 34px; }
       .page::before { left: 20px; }
@@ -385,6 +420,11 @@
 
       <label for="tanggal">Tanggal</label>
       <input type="date" id="tanggal">
+
+      <div id="jadwalSuggest" class="jadwal-suggest" style="display:none;">
+        <p class="jadwal-label">Jadwal hari ini</p>
+        <div class="jadwal-chips" id="jadwalChips"></div>
+      </div>
 
       <label for="kelas">Kelas</label>
       <select id="kelas"><option value="">Memuat…</option></select>
@@ -466,6 +506,7 @@
     const HARI_ID = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
     const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
     let daftarKelas = [];
+    let jadwalData = [];
 
     function showTab(tab) {
       document.getElementById('panel-isi').style.display = tab === 'isi' ? 'block' : 'none';
@@ -482,6 +523,60 @@
       const d = new Date(val + 'T00:00:00');
       document.getElementById('lblHari').textContent =
         HARI_ID[d.getDay()] + ', ' + d.getDate() + ' ' + BULAN_ID[d.getMonth()] + ' ' + d.getFullYear();
+      updateJadwalSuggest();
+    }
+
+    function muatJadwal() {
+      callApi('getJadwal').then(function(list) {
+        jadwalData = list || [];
+        updateJadwalSuggest();
+      }).catch(function(err) {
+        console.error('Gagal memuat jadwal:', err);
+      });
+    }
+
+    function updateJadwalSuggest() {
+      const box = document.getElementById('jadwalSuggest');
+      const chipsEl = document.getElementById('jadwalChips');
+      const val = document.getElementById('tanggal').value;
+      if (!val || !jadwalData.length) { box.style.display = 'none'; return; }
+
+      const d = new Date(val + 'T00:00:00');
+      const hariIni = HARI_ID[d.getDay()];
+      const jadwalHariIni = jadwalData.filter(function(j) { return j.hari === hariIni; });
+
+      if (!jadwalHariIni.length) { box.style.display = 'none'; return; }
+
+      const kelasTerpilih = document.getElementById('kelas').value;
+      const jamDariTerisi = document.getElementById('jamDari').value;
+
+      chipsEl.innerHTML = jadwalHariIni.map(function(j, i) {
+        const parsed = parseJamKe(j.jamKe);
+        const sedangDipakai = kelasTerpilih === j.kelas && jamDariTerisi === parsed.dari;
+        return '<button type="button" class="jadwal-chip' + (sedangDipakai ? ' used' : '') + '" data-idx="' + i + '">' +
+          escapeHtml(j.kelas) + ' · Jam ' + escapeHtml(j.jamKe) +
+        '</button>';
+      }).join('');
+
+      chipsEl.querySelectorAll('.jadwal-chip').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          const j = jadwalHariIni[Number(btn.getAttribute('data-idx'))];
+          const parsed = parseJamKe(j.jamKe);
+          document.getElementById('jamDari').value = parsed.dari;
+          document.getElementById('jamSampai').value = parsed.sampai;
+          const selKelas = document.getElementById('kelas');
+          selKelas.value = j.kelas;
+          selKelas.dispatchEvent(new Event('change'));
+          updateJadwalSuggest();
+        });
+      });
+
+      box.style.display = 'block';
+    }
+
+    function parseJamKe(jamKe) {
+      const parts = String(jamKe).split('-');
+      return { dari: parts[0] || '', sampai: parts[1] || '' };
     }
 
     function initTanggal() {
@@ -516,6 +611,7 @@
       }).catch(function(err) {
         listEl.innerHTML = '<p class="empty-hint">Gagal memuat siswa: ' + escapeHtml(err.message) + '</p>';
       });
+      updateJadwalSuggest();
     });
 
     function renderSiswa(siswa) {
@@ -700,6 +796,7 @@
 
     initTanggal();
     muatDaftarKelas();
+    muatJadwal();
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
