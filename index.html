@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #1E2B22;
+      --paper: #F6F2E4;
+      --paper-line: #D8CDB0;
+      --margin: #A6493C;
+      --rule: #B7C6CB;
+      --accent: #3E6B52;
+      --accent-dark: #2C4E3B;
+      --amber: #C08A2E;
+      --brick: #B36A3C;
+      --slate: #5B6B8C;
+      --red: #A63D3D;
+      --muted: #6E6252;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--ink);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--ink);
+      color: var(--paper);
+      padding: 22px 20px 18px;
+      text-align: left;
+    }
+
+    header h1 {
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      font-style: italic;
+      font-size: 26px;
+      margin: 0 0 2px;
+      letter-spacing: 0.2px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 13px;
+      color: #C9D6CC;
+    }
+
+    nav.tabs {
+      display: flex;
+      background: var(--accent-dark);
+    }
+
+    nav.tabs button {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #CFE0D3;
+      padding: 12px 8px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: 0.15s;
+    }
+
+    nav.tabs button.active {
+      color: #fff;
+      border-bottom-color: var(--margin);
+    }
+
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 18px 14px 60px;
+    }
+
+    .page {
+      background: var(--paper);
+      border-radius: 6px;
+      position: relative;
+      padding: 22px 20px 22px 44px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 30px,
+        var(--paper-line) 31px
+      );
+      background-position: 0 68px;
+    }
+
+    .page::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 28px;
+      width: 2px;
+      background: var(--margin);
+      opacity: 0.55;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin: 0 0 4px;
+    }
+
+    .tanggal-hari {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      font-weight: 600;
+      margin: 0 0 18px;
+      color: var(--accent-dark);
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+      margin: 14px 0 6px;
+    }
+
+    input[type="date"],
+    input[type="number"],
+    input[type="text"],
+    select,
+    textarea {
+      width: 100%;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      padding: 9px 10px;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .row2 {
+      display: flex;
+      gap: 12px;
+    }
+    .row2 > div { flex: 1; }
+
+    .siswa-list {
+      margin-top: 8px;
+      border-top: 1px solid var(--paper-line);
+    }
+
+    .siswa-item {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--paper-line);
+    }
+
+    .siswa-item .nama {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .status-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .status-group label {
+      margin: 0;
+      font-weight: 400;
+      font-size: 12.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 9px;
+      border: 1px solid var(--rule);
+      border-radius: 20px;
+      cursor: pointer;
+      background: #fff;
+    }
+
+    .status-group input { display: none; }
+
+    .status-group label.sel-Hadir { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .status-group label.sel-Izin { background: var(--amber); color: #fff; border-color: var(--amber); }
+    .status-group label.sel-Sakit { background: var(--brick); color: #fff; border-color: var(--brick); }
+    .status-group label.sel-Dispensasi { background: var(--slate); color: #fff; border-color: var(--slate); }
+    .status-group label.sel-Alpa { background: var(--red); color: #fff; border-color: var(--red); }
+
+    .ket-input {
+      margin-top: 6px;
+      display: none;
+    }
+    .ket-input.show { display: block; }
+
+    .empty-hint {
+      font-size: 13px;
+      color: var(--muted);
+      font-style: italic;
+      padding: 10px 0;
+    }
+
+    button.submit {
+      margin-top: 22px;
+      width: 100%;
+      background: var(--accent-dark);
+      color: #fff;
+      border: none;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    button.submit:disabled { opacity: 0.6; cursor: default; }
+
+    .toast {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 5px;
+      font-size: 13.5px;
+      display: none;
+    }
+    .toast.ok { background: #E4EEE7; color: var(--accent-dark); display: block; }
+    .toast.err { background: #F5E2DF; color: var(--red); display: block; }
+
+    /* RIWAYAT */
+    .entry-card {
+      border-bottom: 1px solid var(--paper-line);
+      padding: 14px 0;
+    }
+    .entry-card:last-child { border-bottom: none; }
+
+    .entry-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+
+    .entry-date {
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--accent-dark);
+    }
+
+    .entry-kelas {
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .entry-materi {
+      font-size: 14px;
+      margin: 4px 0 8px;
+    }
+
+    .rekap-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      font-size: 11.5px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      color: #fff;
+    }
+    .chip.Hadir { background: var(--accent); }
+    .chip.Izin { background: var(--amber); }
+    .chip.Sakit { background: var(--brick); }
+    .chip.Dispensasi { background: var(--slate); }
+    .chip.Alpa { background: var(--red); }
+
+    .entry-ket {
+      margin-top: 8px;
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .loading { font-size: 13px; color: var(--muted); padding: 12px 0; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Jurnal Mengajar</h1>
+    <p>Catatan harian pembelajaran & kehadiran siswa</p>
+  </header>
+
+  <nav class="tabs">
+    <button id="tab-isi" class="active" onclick="showTab('isi')">Isi Jurnal</button>
+    <button id="tab-riwayat" onclick="showTab('riwayat')">Riwayat</button>
+  </nav>
+
+  <main>
+
+    <!-- ===== TAB: ISI JURNAL ===== -->
+    <section id="panel-isi" class="page">
+      <p class="eyebrow">Hari & tanggal</p>
+      <p class="tanggal-hari" id="lblHari">—</p>
+
+      <label for="tanggal">Tanggal</label>
+      <input type="date" id="tanggal">
+
+      <label for="kelas">Kelas</label>
+      <select id="kelas"><option value="">Memuat…</option></select>
+
+      <label>Jam ke- <span style="font-weight:400;color:var(--muted);">(isi "sampai" hanya jika KBM lebih dari 1 JP)</span></label>
+      <div class="row2">
+        <div>
+          <input type="number" id="jamDari" min="1" max="12" placeholder="Dari, contoh: 1">
+        </div>
+        <div>
+          <input type="number" id="jamSampai" min="1" max="12" placeholder="Sampai (opsional), contoh: 3">
+        </div>
+      </div>
+
+      <label for="mapel">Mata pelajaran</label>
+      <input type="text" id="mapel" placeholder="Otomatis terisi dari kelas, bisa diubah">
+
+      <label for="materi">Materi / hal yang perlu dicatat</label>
+      <textarea id="materi" placeholder="Contoh: Persamaan kuadrat, latihan soal bab 3..."></textarea>
+
+      <label>Absensi siswa</label>
+      <div class="siswa-list" id="siswaList">
+        <p class="empty-hint">Pilih kelas dahulu untuk memuat daftar siswa.</p>
+      </div>
+
+      <button class="submit" id="btnSimpan" onclick="simpan()">Simpan Jurnal</button>
+      <div class="toast" id="toast"></div>
+    </section>
+
+    <!-- ===== TAB: RIWAYAT ===== -->
+    <section id="panel-riwayat" class="page" style="display:none;">
+      <p class="eyebrow">Catatan tersimpan</p>
+      <p class="tanggal-hari">Riwayat Jurnal</p>
+      <div id="riwayatList"><p class="loading">Memuat riwayat…</p></div>
+    </section>
+
+  </main>
+
+  <script>
+    // ================== KONFIGURASI — ISI SEBELUM DEPLOY ==================
+    // URL Web App Apps Script Anda (dari Deploy > Manage deployments), harus diakhiri /exec
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPdKVqnAlQNlo_-bRQzITg1J4XwszzJlJB877r0KrynxLaaj5-5uQ-rBYOzTE39RuTiw/exec';
+    // Harus SAMA PERSIS dengan API_KEY yang ada di Code.gs
+    const API_KEY = 'dimest85haysnaidrun';
+    // ========================================================================
+
+    function callApi(action, extra) {
+      const body = Object.assign({ action: action, key: API_KEY }, extra || {});
+      return fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // hindari CORS preflight
+        body: JSON.stringify(body)
+      })
+        .then(function(res) { return res.json(); })
+        .then(function(json) {
+          if (!json.ok) throw new Error(json.message || 'Terjadi kesalahan di server.');
+          return json.data;
+        });
+    }
+
+    const HARI_ID = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    let daftarKelas = [];
+
+    function showTab(tab) {
+      document.getElementById('panel-isi').style.display = tab === 'isi' ? 'block' : 'none';
+      document.getElementById('panel-riwayat').style.display = tab === 'riwayat' ? 'block' : 'none';
+      document.getElementById('tab-isi').classList.toggle('active', tab === 'isi');
+      document.getElementById('tab-riwayat').classList.toggle('active', tab === 'riwayat');
+      if (tab === 'riwayat') muatRiwayat();
+    }
+
+    function updateLabelHari() {
+      const val = document.getElementById('tanggal').value;
+      if (!val) { document.getElementById('lblHari').textContent = '—'; return; }
+      const d = new Date(val + 'T00:00:00');
+      document.getElementById('lblHari').textContent =
+        HARI_ID[d.getDay()] + ', ' + d.getDate() + ' ' + BULAN_ID[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    function initTanggal() {
+      const today = new Date();
+      const iso = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+      document.getElementById('tanggal').value = iso;
+      updateLabelHari();
+    }
+    document.getElementById('tanggal').addEventListener('change', updateLabelHari);
+
+    function muatDaftarKelas() {
+      callApi('getDaftarKelas').then(function(list) {
+        daftarKelas = list;
+        const sel = document.getElementById('kelas');
+        sel.innerHTML = '<option value="">Pilih kelas…</option>' +
+          list.map(k => '<option value="' + k.kelas + '">' + k.kelas + '</option>').join('');
+      }).catch(showErr);
+    }
+
+    document.getElementById('kelas').addEventListener('change', function() {
+      const kelas = this.value;
+      const info = daftarKelas.find(k => k.kelas === kelas);
+      document.getElementById('mapel').value = info ? info.mapel : '';
+      const listEl = document.getElementById('siswaList');
+      if (!kelas) {
+        listEl.innerHTML = '<p class="empty-hint">Pilih kelas dahulu untuk memuat daftar siswa.</p>';
+        return;
+      }
+      listEl.innerHTML = '<p class="loading">Memuat siswa…</p>';
+      callApi('getSiswaByKelas', { kelas: kelas }).then(function(siswa) {
+        renderSiswa(siswa);
+      }).catch(function(err) {
+        listEl.innerHTML = '<p class="empty-hint">Gagal memuat siswa: ' + escapeHtml(err.message) + '</p>';
+      });
+    });
+
+    function renderSiswa(siswa) {
+      const listEl = document.getElementById('siswaList');
+      if (!siswa.length) {
+        listEl.innerHTML = '<p class="empty-hint">Belum ada siswa terdaftar untuk kelas ini di sheet "Siswa".</p>';
+        return;
+      }
+      listEl.innerHTML = siswa.map((s, i) => {
+        const name = 'status_' + i;
+        return '<div class="siswa-item" data-nama="' + escapeHtml(s.nama) + '">' +
+          '<div class="nama">' + (s.noAbsen ? s.noAbsen + '. ' : '') + escapeHtml(s.nama) + '</div>' +
+          '<div class="status-group">' +
+            ['Hadir','Izin','Sakit','Dispensasi','Alpa'].map(function(st, j) {
+              return '<label class="' + (j===0 ? 'sel-Hadir' : '') + '">' +
+                '<input type="radio" name="' + name + '" value="' + st + '"' + (j===0?' checked':'') + '>' + st +
+                '</label>';
+            }).join('') +
+          '</div>' +
+          '<input type="text" class="ket-input" placeholder="Keterangan (opsional)">' +
+        '</div>';
+      }).join('');
+
+      // handle status click styling + tampilkan keterangan bila bukan Hadir
+      listEl.querySelectorAll('.siswa-item').forEach(function(item) {
+        const radios = item.querySelectorAll('input[type=radio]');
+        const ketInput = item.querySelector('.ket-input');
+        radios.forEach(function(r) {
+          r.addEventListener('change', function() {
+            item.querySelectorAll('.status-group label').forEach(function(l) {
+              l.className = '';
+            });
+            item.querySelector('input[value="' + r.value + '"]').parentElement.className = 'sel-' + r.value;
+            ketInput.classList.toggle('show', r.value !== 'Hadir');
+          });
+        });
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function(c) {
+        return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+      });
+    }
+
+    function simpan() {
+      const tanggal = document.getElementById('tanggal').value;
+      const kelas = document.getElementById('kelas').value;
+      const jamDari = document.getElementById('jamDari').value;
+      const jamSampai = document.getElementById('jamSampai').value;
+      const mapel = document.getElementById('mapel').value;
+      const materi = document.getElementById('materi').value;
+
+      if (!tanggal || !kelas || !jamDari) {
+        showToast('err', 'Tanggal, kelas, dan jam ke- (dari) wajib diisi.');
+        return;
+      }
+      if (jamSampai && Number(jamSampai) < Number(jamDari)) {
+        showToast('err', 'Jam "sampai" tidak boleh lebih kecil dari jam "dari".');
+        return;
+      }
+      const jamKe = (jamSampai && Number(jamSampai) !== Number(jamDari))
+        ? (jamDari + '-' + jamSampai)
+        : jamDari;
+
+      const siswaItems = document.querySelectorAll('#siswaList .siswa-item');
+      const siswa = Array.from(siswaItems).map(function(item) {
+        const checked = item.querySelector('input[type=radio]:checked');
+        return {
+          nama: item.getAttribute('data-nama'),
+          status: checked ? checked.value : 'Hadir',
+          keterangan: item.querySelector('.ket-input').value
+        };
+      });
+
+      const btn = document.getElementById('btnSimpan');
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan…';
+
+      callApi('simpanJurnal', { payload: { tanggal: tanggal, kelas: kelas, jamKe: jamKe, mapel: mapel, materi: materi, siswa: siswa } })
+        .then(function(res) {
+          btn.disabled = false;
+          btn.textContent = 'Simpan Jurnal';
+          showToast('ok', 'Tersimpan — ' + res.hari + ', jurnal & absensi ' + siswa.length + ' siswa berhasil dicatat.');
+          document.getElementById('materi').value = '';
+        })
+        .catch(function(err) {
+          btn.disabled = false;
+          btn.textContent = 'Simpan Jurnal';
+          showErr(err);
+        });
+    }
+
+    function showToast(kind, msg) {
+      const el = document.getElementById('toast');
+      el.className = 'toast ' + kind;
+      el.textContent = msg;
+    }
+    function showErr(err) {
+      showToast('err', 'Gagal: ' + (err.message || err));
+    }
+
+    function muatRiwayat() {
+      const el = document.getElementById('riwayatList');
+      el.innerHTML = '<p class="loading">Memuat riwayat…</p>';
+      callApi('getRiwayat').then(function(list) {
+        try {
+          if (!list || !list.length) {
+            el.innerHTML = '<p class="empty-hint">Belum ada jurnal tersimpan.</p>';
+            return;
+          }
+          el.innerHTML = list.map(function(e) {
+            const rekap = e.rekap || {};
+            return '<div class="entry-card">' +
+              '<div class="entry-top"><span class="entry-date">' + (e.hari || '') + ', ' + (e.tanggal || '') + '</span>' +
+              '<span class="entry-kelas">' + escapeHtml(e.kelas || '') + ' · Jam ke-' + (e.jamKe || '') + '</span></div>' +
+              '<div class="entry-materi">' + escapeHtml(e.materi || '(tanpa catatan materi)') + '</div>' +
+              '<div class="rekap-chips">' +
+                ['Hadir','Izin','Sakit','Dispensasi','Alpa'].map(function(st) {
+                  return '<span class="chip ' + st + '">' + st + ' ' + (rekap[st] || 0) + '</span>';
+                }).join('') +
+              '</div>' +
+              (e.keteranganTidakHadir ? '<div class="entry-ket">' + escapeHtml(e.keteranganTidakHadir) + '</div>' : '') +
+            '</div>';
+          }).join('');
+        } catch (clientErr) {
+          console.error('Error merender riwayat:', clientErr, list);
+          el.innerHTML = '<p class="empty-hint">Gagal menampilkan riwayat: ' + escapeHtml(clientErr.message) + '</p>';
+        }
+      }).catch(function(err) {
+        console.error('Error API getRiwayat:', err);
+        el.innerHTML = '<p class="empty-hint">Gagal memuat riwayat: ' + escapeHtml(err.message) + '</p>';
+      });
+    }
+
+    initTanggal();
+    muatDaftarKelas();
+  </script>
+
+</body>
+</html>
