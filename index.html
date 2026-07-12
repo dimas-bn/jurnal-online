@@ -374,6 +374,51 @@
       border: 1px solid var(--rule);
     }
 
+    .entry-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .entry-btn {
+      background: #fff;
+      border: 1px solid var(--rule);
+      color: var(--accent-dark);
+      font-size: 12.5px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+    .entry-btn.danger {
+      color: var(--red);
+      border-color: #E3C6C1;
+    }
+
+    .edit-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: #FBF0DD;
+      border: 1px solid var(--amber);
+      color: #6B4E1A;
+      font-size: 12.5px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    .edit-banner button {
+      background: var(--amber);
+      color: #fff;
+      border: none;
+      font-size: 12px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      padding: 6px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
     @media (max-width: 380px) {
       .page { padding: 18px 14px 18px 34px; }
       .page::before { left: 20px; }
@@ -417,6 +462,11 @@
     <section id="panel-isi" class="page">
       <p class="eyebrow">Hari & tanggal</p>
       <p class="tanggal-hari" id="lblHari">—</p>
+
+      <div id="editBanner" class="edit-banner">
+        <span id="editBannerText"></span>
+        <button type="button" id="btnBatalEdit">Batal edit</button>
+      </div>
 
       <label for="tanggal">Tanggal</label>
       <input type="date" id="tanggal">
@@ -507,6 +557,7 @@
     const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
     let daftarKelas = [];
     let jadwalData = [];
+    let editingId = null;
 
     function showTab(tab) {
       document.getElementById('panel-isi').style.display = tab === 'isi' ? 'block' : 'none';
@@ -689,18 +740,25 @@
 
       const btn = document.getElementById('btnSimpan');
       btn.disabled = true;
-      btn.textContent = 'Menyimpan…';
+      btn.textContent = editingId ? 'Menyimpan perubahan…' : 'Menyimpan…';
 
-      callApi('simpanJurnal', { payload: { tanggal: tanggal, kelas: kelas, jamKe: jamKe, mapel: mapel, materi: materi, siswa: siswa } })
-        .then(function(res) {
-          btn.disabled = false;
-          btn.textContent = 'Simpan Jurnal';
-          showToast('ok', 'Tersimpan — ' + res.hari + ', jurnal & absensi ' + siswa.length + ' siswa berhasil dicatat.');
-          document.getElementById('materi').value = '';
-        })
+      const payload = { tanggal: tanggal, kelas: kelas, jamKe: jamKe, mapel: mapel, materi: materi, siswa: siswa };
+      const apiCall = editingId
+        ? callApi('updateJurnal', { id: editingId, payload: payload })
+        : callApi('simpanJurnal', { payload: payload });
+
+      apiCall.then(function(res) {
+        const sedangEdit = !!editingId;
+        editingId = null;
+        document.getElementById('editBanner').style.display = 'none';
+        btn.disabled = false;
+        btn.textContent = 'Simpan Jurnal';
+        showToast('ok', (sedangEdit ? 'Perubahan tersimpan — ' : 'Tersimpan — ') + res.hari + ', jurnal & absensi ' + siswa.length + ' siswa berhasil dicatat.');
+        document.getElementById('materi').value = '';
+      })
         .catch(function(err) {
           btn.disabled = false;
-          btn.textContent = 'Simpan Jurnal';
+          btn.textContent = editingId ? 'Update Jurnal' : 'Simpan Jurnal';
           showErr(err);
         });
     }
@@ -776,6 +834,10 @@
               }).join('') +
             '</div>' +
             (e.keteranganTidakHadir ? '<div class="entry-ket">' + escapeHtml(e.keteranganTidakHadir) + '</div>' : '') +
+            '<div class="entry-actions">' +
+              '<button type="button" class="entry-btn" data-action="edit" data-id="' + escapeHtml(e.id) + '">Edit</button>' +
+              '<button type="button" class="entry-btn danger" data-action="hapus" data-id="' + escapeHtml(e.id) + '">Hapus</button>' +
+            '</div>' +
           '</div>';
         }).join('');
       } catch (clientErr) {
@@ -793,6 +855,92 @@
       document.getElementById('filterSampai').value = '';
       renderRiwayatFiltered();
     });
+
+    document.getElementById('riwayatList').addEventListener('click', function(ev) {
+      const btn = ev.target.closest('button[data-action]');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      if (btn.getAttribute('data-action') === 'edit') mulaiEdit(id);
+      else if (btn.getAttribute('data-action') === 'hapus') hapusJurnalUI(id);
+    });
+
+    function mulaiEdit(id) {
+      callApi('getJurnalDetail', { id: id }).then(function(detail) {
+        editingId = id;
+        showTab('isi');
+
+        document.getElementById('editBanner').style.display = 'flex';
+        document.getElementById('editBannerText').textContent =
+          'Mengedit jurnal ' + detail.kelas + ' — perubahan akan menimpa data lama saat disimpan.';
+        document.getElementById('btnSimpan').textContent = 'Update Jurnal';
+
+        document.getElementById('tanggal').value = detail.tanggalISO;
+        updateLabelHari();
+
+        const parsed = parseJamKe(detail.jamKe);
+        document.getElementById('jamDari').value = parsed.dari;
+        document.getElementById('jamSampai').value = parsed.sampai;
+        document.getElementById('mapel').value = detail.mapel;
+        document.getElementById('materi').value = detail.materi;
+        document.getElementById('kelas').value = detail.kelas;
+
+        const listEl = document.getElementById('siswaList');
+        listEl.innerHTML = '<p class="loading">Memuat siswa…</p>';
+        callApi('getSiswaByKelas', { kelas: detail.kelas }).then(function(siswa) {
+          renderSiswa(siswa);
+          applyEditStatuses(detail.siswa);
+        }).catch(function(err) {
+          listEl.innerHTML = '<p class="empty-hint">Gagal memuat siswa: ' + escapeHtml(err.message) + '</p>';
+        });
+
+        updateJadwalSuggest();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }).catch(function(err) {
+        alert('Gagal memuat data jurnal: ' + err.message);
+      });
+    }
+
+    function applyEditStatuses(siswaDenganStatus) {
+      const map = {};
+      siswaDenganStatus.forEach(function(s) { map[s.nama] = s; });
+      document.querySelectorAll('#siswaList .siswa-item').forEach(function(item) {
+        const info = map[item.getAttribute('data-nama')];
+        if (!info) return;
+        const radio = item.querySelector('input[type=radio][value="' + info.status + '"]');
+        if (radio) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change'));
+        }
+        if (info.keterangan) {
+          item.querySelector('.ket-input').value = info.keterangan;
+        }
+      });
+    }
+
+    function resetForm() {
+      editingId = null;
+      document.getElementById('editBanner').style.display = 'none';
+      document.getElementById('btnSimpan').textContent = 'Simpan Jurnal';
+      document.getElementById('kelas').value = '';
+      document.getElementById('mapel').value = '';
+      document.getElementById('jamDari').value = '';
+      document.getElementById('jamSampai').value = '';
+      document.getElementById('materi').value = '';
+      document.getElementById('siswaList').innerHTML = '<p class="empty-hint">Pilih kelas dahulu untuk memuat daftar siswa.</p>';
+      updateJadwalSuggest();
+    }
+    document.getElementById('btnBatalEdit').addEventListener('click', resetForm);
+
+    function hapusJurnalUI(id) {
+      if (!confirm('Yakin hapus jurnal ini? Data absensi terkait juga akan terhapus, dan tidak bisa dikembalikan.')) return;
+      callApi('hapusJurnal', { id: id }).then(function() {
+        riwayatData = riwayatData.filter(function(e) { return e.id !== id; });
+        renderRiwayatFiltered();
+        if (editingId === id) resetForm();
+      }).catch(function(err) {
+        alert('Gagal menghapus: ' + err.message);
+      });
+    }
 
     initTanggal();
     muatDaftarKelas();
