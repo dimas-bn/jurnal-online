@@ -320,6 +320,25 @@
 
     .loading { font-size: 13px; color: var(--muted); padding: 12px 0; }
 
+    .filter-bar {
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--paper-line);
+    }
+    .filter-bar select { margin-bottom: 10px; }
+    .filter-bar .row2 { margin-bottom: 10px; }
+    .reset-filter {
+      background: none;
+      border: 1px solid var(--rule);
+      color: var(--muted);
+      font-size: 12.5px;
+      padding: 7px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .no-match { font-size: 13px; color: var(--muted); font-style: italic; padding: 10px 0; }
+
     @media (max-width: 380px) {
       .page { padding: 18px 14px 18px 34px; }
       .page::before { left: 20px; }
@@ -397,6 +416,20 @@
     <section id="panel-riwayat" class="page" style="display:none;">
       <p class="eyebrow">Catatan tersimpan</p>
       <p class="tanggal-hari">Riwayat Jurnal</p>
+
+      <div class="filter-bar">
+        <select id="filterKelas"><option value="">Semua kelas</option></select>
+        <div class="row2">
+          <div>
+            <input type="date" id="filterDari" aria-label="Dari tanggal">
+          </div>
+          <div>
+            <input type="date" id="filterSampai" aria-label="Sampai tanggal">
+          </div>
+        </div>
+        <button type="button" id="btnResetFilter" class="reset-filter">Reset filter</button>
+      </div>
+
       <div id="riwayatList"><p class="loading">Memuat riwayat…</p></div>
     </section>
 
@@ -585,38 +618,85 @@
       showToast('err', 'Gagal: ' + (err.message || err));
     }
 
+    let riwayatData = [];
+
     function muatRiwayat() {
       const el = document.getElementById('riwayatList');
       el.innerHTML = '<p class="loading">Memuat riwayat…</p>';
       callApi('getRiwayat').then(function(list) {
-        try {
-          if (!list || !list.length) {
-            el.innerHTML = '<p class="empty-hint">Belum ada jurnal tersimpan.</p>';
-            return;
-          }
-          el.innerHTML = list.map(function(e) {
-            const rekap = e.rekap || {};
-            return '<div class="entry-card">' +
-              '<div class="entry-top"><span class="entry-date">' + (e.hari || '') + ', ' + (e.tanggal || '') + '</span>' +
-              '<span class="entry-kelas">' + escapeHtml(e.kelas || '') + ' · Jam ke-' + (e.jamKe || '') + '</span></div>' +
-              '<div class="entry-materi">' + escapeHtml(e.materi || '(tanpa catatan materi)') + '</div>' +
-              '<div class="rekap-chips">' +
-                ['Hadir','Izin','Sakit','Dispensasi','Alpa'].map(function(st) {
-                  return '<span class="chip ' + st + '">' + st + ' ' + (rekap[st] || 0) + '</span>';
-                }).join('') +
-              '</div>' +
-              (e.keteranganTidakHadir ? '<div class="entry-ket">' + escapeHtml(e.keteranganTidakHadir) + '</div>' : '') +
-            '</div>';
-          }).join('');
-        } catch (clientErr) {
-          console.error('Error merender riwayat:', clientErr, list);
-          el.innerHTML = '<p class="empty-hint">Gagal menampilkan riwayat: ' + escapeHtml(clientErr.message) + '</p>';
-        }
+        riwayatData = list || [];
+        isiFilterKelas();
+        renderRiwayatFiltered();
       }).catch(function(err) {
         console.error('Error API getRiwayat:', err);
         el.innerHTML = '<p class="empty-hint">Gagal memuat riwayat: ' + escapeHtml(err.message) + '</p>';
       });
     }
+
+    function isiFilterKelas() {
+      const sel = document.getElementById('filterKelas');
+      if (sel.dataset.filled) return; // isi sekali saja per load riwayat
+      const kelasUnik = Array.from(new Set(riwayatData.map(e => e.kelas))).sort();
+      sel.innerHTML = '<option value="">Semua kelas</option>' +
+        kelasUnik.map(k => '<option value="' + escapeHtml(k) + '">' + escapeHtml(k) + '</option>').join('');
+      sel.dataset.filled = '1';
+    }
+
+    function renderRiwayatFiltered() {
+      const kelasFilter = document.getElementById('filterKelas').value;
+      const dariFilter = document.getElementById('filterDari').value;
+      const sampaiFilter = document.getElementById('filterSampai').value;
+
+      const filtered = riwayatData.filter(function(e) {
+        if (kelasFilter && e.kelas !== kelasFilter) return false;
+        if (dariFilter && e.tanggalISO < dariFilter) return false;
+        if (sampaiFilter && e.tanggalISO > sampaiFilter) return false;
+        return true;
+      });
+
+      renderRiwayat(filtered, riwayatData.length);
+    }
+
+    function renderRiwayat(list, totalSemua) {
+      try {
+        const el = document.getElementById('riwayatList');
+        if (!riwayatData.length) {
+          el.innerHTML = '<p class="empty-hint">Belum ada jurnal tersimpan.</p>';
+          return;
+        }
+        if (!list.length) {
+          el.innerHTML = '<p class="no-match">Tidak ada jurnal yang cocok dengan filter ini.</p>';
+          return;
+        }
+        el.innerHTML = list.map(function(e) {
+          const rekap = e.rekap || {};
+          return '<div class="entry-card">' +
+            '<div class="entry-top"><span class="entry-date">' + (e.hari || '') + ', ' + (e.tanggal || '') + '</span>' +
+            '<span class="entry-kelas">' + escapeHtml(e.kelas || '') + ' · Jam ke-' + (e.jamKe || '') + '</span></div>' +
+            '<div class="entry-materi">' + escapeHtml(e.materi || '(tanpa catatan materi)') + '</div>' +
+            '<div class="rekap-chips">' +
+              ['Hadir','Izin','Sakit','Dispensasi','Alpa'].map(function(st) {
+                return '<span class="chip ' + st + '">' + st + ' ' + (rekap[st] || 0) + '</span>';
+              }).join('') +
+            '</div>' +
+            (e.keteranganTidakHadir ? '<div class="entry-ket">' + escapeHtml(e.keteranganTidakHadir) + '</div>' : '') +
+          '</div>';
+        }).join('');
+      } catch (clientErr) {
+        console.error('Error merender riwayat:', clientErr, list);
+        document.getElementById('riwayatList').innerHTML = '<p class="empty-hint">Gagal menampilkan riwayat: ' + escapeHtml(clientErr.message) + '</p>';
+      }
+    }
+
+    document.getElementById('filterKelas').addEventListener('change', renderRiwayatFiltered);
+    document.getElementById('filterDari').addEventListener('change', renderRiwayatFiltered);
+    document.getElementById('filterSampai').addEventListener('change', renderRiwayatFiltered);
+    document.getElementById('btnResetFilter').addEventListener('click', function() {
+      document.getElementById('filterKelas').value = '';
+      document.getElementById('filterDari').value = '';
+      document.getElementById('filterSampai').value = '';
+      renderRiwayatFiltered();
+    });
 
     initTanggal();
     muatDaftarKelas();
