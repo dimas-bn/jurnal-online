@@ -82,9 +82,9 @@
       background: none;
       border: none;
       color: #CFE0D3;
-      padding: 15px 8px;
+      padding: 15px 4px;
       font-family: 'IBM Plex Sans', sans-serif;
-      font-size: 14.5px;
+      font-size: 13px;
       font-weight: 500;
       cursor: pointer;
       border-bottom: 3px solid transparent;
@@ -465,6 +465,97 @@
       .page::before { display: none; }
     }
 
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      font-weight: 400;
+      margin-top: 14px;
+      cursor: pointer;
+    }
+    .checkbox-label input { width: auto; margin: 0; }
+
+    .stat-cards {
+      display: flex;
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .stat-card {
+      flex: 1;
+      background: #fff;
+      border: 1px solid var(--paper-line);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .stat-card .stat-num {
+      font-family: 'Fraunces', serif;
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--accent-dark);
+      line-height: 1.1;
+    }
+    .stat-card .stat-label {
+      font-size: 11.5px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .stat-section-title {
+      font-size: 12.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 22px 0 10px;
+    }
+
+    .bar-row { margin-bottom: 10px; }
+    .bar-row-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12.5px;
+      margin-bottom: 4px;
+    }
+    .bar-track {
+      background: #EFEADA;
+      height: 9px;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      background: var(--accent);
+      height: 100%;
+      border-radius: 5px;
+    }
+
+    .absen-list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--paper-line);
+      font-size: 13px;
+    }
+    .absen-list-item .rank {
+      color: var(--muted);
+      font-size: 12px;
+      width: 20px;
+      flex-shrink: 0;
+    }
+    .absen-list-item .nama-kelas { flex: 1; }
+    .absen-list-item .nama-kelas .kelas-kecil {
+      color: var(--muted);
+      font-size: 11.5px;
+    }
+    .absen-list-item .total-badge {
+      background: var(--red);
+      color: #fff;
+      font-size: 11.5px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+
     @media (max-width: 380px) {
       .page { padding: 18px 14px 18px 34px; }
       .page::before { left: 20px; }
@@ -501,6 +592,7 @@
     <button id="tab-isi" class="active" onclick="showTab('isi')">Isi Jurnal</button>
     <button id="tab-riwayat" onclick="showTab('riwayat')">Riwayat</button>
     <button id="tab-rekap" onclick="showTab('rekap')">Rekap</button>
+    <button id="tab-statistik" onclick="showTab('statistik')">Statistik</button>
   </nav>
 
   <main>
@@ -607,6 +699,44 @@
       <div id="rekapResult"></div>
     </section>
 
+    <!-- ===== TAB: STATISTIK ===== -->
+    <section id="panel-statistik" class="page" style="display:none;">
+      <p class="eyebrow">Dashboard ringkas</p>
+      <p class="tanggal-hari">Statistik</p>
+
+      <div class="row2">
+        <div>
+          <label for="statBulan">Bulan</label>
+          <select id="statBulan">
+            <option value="1">Januari</option>
+            <option value="2">Februari</option>
+            <option value="3">Maret</option>
+            <option value="4">April</option>
+            <option value="5">Mei</option>
+            <option value="6">Juni</option>
+            <option value="7">Juli</option>
+            <option value="8">Agustus</option>
+            <option value="9">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
+          </select>
+        </div>
+        <div>
+          <label for="statTahun">Tahun</label>
+          <input type="number" id="statTahun" min="2020" max="2100">
+        </div>
+      </div>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="statSemuaWaktu"> Semua waktu (abaikan bulan/tahun)
+      </label>
+
+      <button type="button" class="submit" id="btnTampilkanStat" style="margin-top:14px;">Tampilkan Statistik</button>
+
+      <div id="statResult"></div>
+    </section>
+
   </main>
 
   <div class="action-bar" id="actionBar">
@@ -647,12 +777,15 @@
       document.getElementById('panel-isi').style.display = tab === 'isi' ? 'block' : 'none';
       document.getElementById('panel-riwayat').style.display = tab === 'riwayat' ? 'block' : 'none';
       document.getElementById('panel-rekap').style.display = tab === 'rekap' ? 'block' : 'none';
+      document.getElementById('panel-statistik').style.display = tab === 'statistik' ? 'block' : 'none';
       document.getElementById('tab-isi').classList.toggle('active', tab === 'isi');
       document.getElementById('tab-riwayat').classList.toggle('active', tab === 'riwayat');
       document.getElementById('tab-rekap').classList.toggle('active', tab === 'rekap');
+      document.getElementById('tab-statistik').classList.toggle('active', tab === 'statistik');
       document.getElementById('actionBar').style.display = tab === 'isi' ? 'block' : 'none';
       if (tab === 'riwayat') muatRiwayat();
       if (tab === 'rekap') isiFilterRekapKelas();
+      if (tab === 'statistik') initStatFilter();
     }
 
     function updateLabelHari() {
@@ -1096,6 +1229,78 @@
           '<th>No</th><th>Nama</th><th>H</th><th>I</th><th>S</th><th>D</th><th>A</th><th>% Hadir</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
         '<button type="button" class="print-btn" onclick="window.print()">🖨️ Cetak / Simpan sebagai PDF</button>';
+    }
+
+    function initStatFilter() {
+      if (!document.getElementById('statTahun').value) {
+        const now = new Date();
+        document.getElementById('statBulan').value = String(now.getMonth() + 1);
+        document.getElementById('statTahun').value = now.getFullYear();
+      }
+    }
+
+    document.getElementById('btnTampilkanStat').addEventListener('click', tampilkanStatistik);
+    document.getElementById('statSemuaWaktu').addEventListener('change', function() {
+      const disabled = this.checked;
+      document.getElementById('statBulan').disabled = disabled;
+      document.getElementById('statTahun').disabled = disabled;
+    });
+
+    function tampilkanStatistik() {
+      const bulan = document.getElementById('statBulan').value;
+      const tahun = document.getElementById('statTahun').value;
+      const semuaWaktu = document.getElementById('statSemuaWaktu').checked;
+      const resultEl = document.getElementById('statResult');
+
+      resultEl.innerHTML = '<p class="loading">Menghitung statistik…</p>';
+
+      callApi('getStatistik', { bulan: bulan, tahun: tahun, semuaWaktu: semuaWaktu }).then(function(data) {
+        renderStatistik(data, semuaWaktu, bulan, tahun);
+      }).catch(function(err) {
+        resultEl.innerHTML = '<p class="empty-hint">Gagal memuat statistik: ' + escapeHtml(err.message) + '</p>';
+      });
+    }
+
+    function renderStatistik(data, semuaWaktu, bulan, tahun) {
+      const resultEl = document.getElementById('statResult');
+
+      if (!data.totalPertemuan) {
+        const periodeTxt = semuaWaktu ? 'sepanjang waktu' : ('di ' + BULAN_ID[Number(bulan) - 1] + ' ' + tahun);
+        resultEl.innerHTML = '<p class="empty-hint">Belum ada jurnal tercatat ' + periodeTxt + '.</p>';
+        return;
+      }
+
+      const maxPertemuan = Math.max.apply(null, data.pertemuanPerKelas.map(function(k) { return k.jumlah; }));
+
+      const cardsHtml =
+        '<div class="stat-cards">' +
+          '<div class="stat-card"><div class="stat-num">' + data.totalPertemuan + '</div><div class="stat-label">Total pertemuan</div></div>' +
+          '<div class="stat-card"><div class="stat-num">' + data.rataRataKehadiran + '%</div><div class="stat-label">Rata-rata kehadiran</div></div>' +
+        '</div>';
+
+      const barsHtml =
+        '<p class="stat-section-title">Pertemuan per kelas</p>' +
+        data.pertemuanPerKelas.map(function(k) {
+          const pct = maxPertemuan ? Math.round((k.jumlah / maxPertemuan) * 100) : 0;
+          return '<div class="bar-row">' +
+            '<div class="bar-row-top"><span>' + escapeHtml(k.kelas) + '</span><span>' + k.jumlah + 'x</span></div>' +
+            '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%;"></div></div>' +
+          '</div>';
+        }).join('');
+
+      const topHtml = !data.topTidakHadir.length
+        ? '<p class="empty-hint">Belum ada catatan ketidakhadiran pada periode ini — semua siswa hadir terus.</p>'
+        : '<p class="stat-section-title">Siswa paling sering tidak hadir</p>' +
+          data.topTidakHadir.map(function(s, i) {
+            return '<div class="absen-list-item">' +
+              '<span class="rank">#' + (i + 1) + '</span>' +
+              '<span class="nama-kelas">' + escapeHtml(s.nama) + '<br><span class="kelas-kecil">' + escapeHtml(s.kelas) +
+                ' · I:' + s.Izin + ' S:' + s.Sakit + ' D:' + s.Dispensasi + ' A:' + s.Alpa + '</span></span>' +
+              '<span class="total-badge">' + s.total + 'x</span>' +
+            '</div>';
+          }).join('');
+
+      resultEl.innerHTML = cardsHtml + barsHtml + topHtml;
     }
 
     initTanggal();
