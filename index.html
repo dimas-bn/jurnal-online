@@ -419,6 +419,18 @@
       flex-shrink: 0;
     }
 
+    .reminder-banner {
+      display: none;
+      background: #F5E2DF;
+      border: 1px solid var(--red);
+      color: #7A2E24;
+      font-size: 12.5px;
+      line-height: 1.5;
+      padding: 10px 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+
     .rekap-summary {
       font-size: 13px;
       color: var(--muted);
@@ -455,6 +467,16 @@
       font-size: 13.5px;
       cursor: pointer;
       font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    .export-link {
+      display: inline-block;
+      text-decoration: none;
+      margin: 14px 0 4px;
+    }
+    .export-link.disabled {
+      opacity: 0.5;
+      pointer-events: none;
     }
 
     @media print {
@@ -607,6 +629,10 @@
         <button type="button" id="btnBatalEdit">Batal edit</button>
       </div>
 
+      <div id="reminderBanner" class="reminder-banner" style="display:none;">
+        <span id="reminderText"></span>
+      </div>
+
       <label for="tanggal">Tanggal</label>
       <input type="date" id="tanggal">
 
@@ -645,6 +671,8 @@
     <section id="panel-riwayat" class="page" style="display:none;">
       <p class="eyebrow">Catatan tersimpan</p>
       <p class="tanggal-hari">Riwayat Jurnal</p>
+
+      <a id="linkExportExcel" href="#" target="_blank" class="print-btn export-link disabled">📥 Export Semua Data (Excel)</a>
 
       <div class="filter-bar">
         <select id="filterKelas"><option value="">Semua kelas</option></select>
@@ -803,6 +831,19 @@
         updateJadwalSuggest();
       }).catch(function(err) {
         console.error('Gagal memuat jadwal:', err);
+      });
+    }
+
+    function cekPengingatHariIni() {
+      callApi('getJadwalBelumDiisi', {}).then(function(list) {
+        const banner = document.getElementById('reminderBanner');
+        if (!list || !list.length) { banner.style.display = 'none'; return; }
+        const items = list.map(function(j) { return j.kelas + ' (Jam ' + j.jamKe + ')'; }).join(', ');
+        document.getElementById('reminderText').textContent =
+          '⏰ Belum diisi hari ini: ' + items + '.';
+        banner.style.display = 'block';
+      }).catch(function(err) {
+        console.error('Gagal cek pengingat:', err);
       });
     }
 
@@ -975,6 +1016,7 @@
         btn.textContent = 'Simpan Jurnal';
         showToast('ok', (sedangEdit ? 'Perubahan tersimpan — ' : 'Tersimpan — ') + res.hari + ', jurnal & absensi ' + siswa.length + ' siswa berhasil dicatat.');
         document.getElementById('materi').value = '';
+        cekPengingatHariIni();
       })
         .catch(function(err) {
           btn.disabled = false;
@@ -1157,6 +1199,7 @@
         riwayatData = riwayatData.filter(function(e) { return e.id !== id; });
         renderRiwayatFiltered();
         if (editingId === id) resetForm();
+        cekPengingatHariIni();
       }).catch(function(err) {
         alert('Gagal menghapus: ' + err.message);
       });
@@ -1303,9 +1346,21 @@
       resultEl.innerHTML = cardsHtml + barsHtml + topHtml;
     }
 
+    function muatLinkExport() {
+      callApi('getExportUrl').then(function(url) {
+        const link = document.getElementById('linkExportExcel');
+        link.href = url;
+        link.classList.remove('disabled');
+      }).catch(function(err) {
+        console.error('Gagal memuat link export:', err);
+      });
+    }
+
     initTanggal();
     muatDaftarKelas();
     muatJadwal();
+    cekPengingatHariIni();
+    muatLinkExport();
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
