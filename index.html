@@ -691,6 +691,12 @@
       <p class="tanggal-hari">Riwayat Jurnal</p>
 
       <a id="linkExportExcel" href="#" target="_blank" class="print-btn export-link disabled">📥 Export Semua Data (Excel)</a>
+      <button type="button" id="btnToggleSampah" class="entry-btn" style="margin:14px 0 4px;">🗑️ Sampah</button>
+
+      <div id="sampahSection" style="display:none; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--paper-line);">
+        <div id="sampahList"></div>
+        <button type="button" id="btnKosongkanSampah" class="entry-btn danger" style="margin-top:10px;">Kosongkan Sampah Permanen</button>
+      </div>
 
       <div class="filter-bar">
         <select id="filterKelas"><option value="">Semua kelas</option></select>
@@ -1165,6 +1171,86 @@
       renderRiwayatFiltered();
     });
 
+    let sampahData = null;
+
+    document.getElementById('btnToggleSampah').addEventListener('click', function() {
+      const section = document.getElementById('sampahSection');
+      const showing = section.style.display === 'block';
+      section.style.display = showing ? 'none' : 'block';
+      if (!showing) muatSampah();
+    });
+
+    function muatSampah() {
+      const listEl = document.getElementById('sampahList');
+      listEl.innerHTML = '<p class="loading">Memuat sampah…</p>';
+      callApi('getSampah').then(function(list) {
+        sampahData = list;
+        renderSampah();
+      }).catch(function(err) {
+        listEl.innerHTML = '<p class="empty-hint">Gagal memuat sampah: ' + escapeHtml(err.message) + '</p>';
+      });
+    }
+
+    function renderSampah() {
+      const listEl = document.getElementById('sampahList');
+      const btnToggle = document.getElementById('btnToggleSampah');
+      btnToggle.textContent = '🗑️ Sampah' + (sampahData && sampahData.length ? ' (' + sampahData.length + ')' : '');
+      if (!sampahData || !sampahData.length) {
+        listEl.innerHTML = '<p class="empty-hint">Sampah kosong.</p>';
+        return;
+      }
+      listEl.innerHTML = sampahData.map(function(item) {
+        return '<div class="entry-card">' +
+          '<div class="entry-top"><span class="entry-date">' + escapeHtml(item.tanggal) + '</span>' +
+          '<span class="entry-kelas">' + escapeHtml(item.kelas) + '</span></div>' +
+          '<div class="entry-materi">' + escapeHtml(item.materi || '(tanpa catatan materi)') + '</div>' +
+          '<div class="entry-ket">Dihapus: ' + escapeHtml(item.waktuDihapus) + '</div>' +
+          '<div class="entry-actions">' +
+            '<button type="button" class="entry-btn" data-action="pulihkan" data-id="' + escapeHtml(item.id) + '">↩️ Pulihkan</button>' +
+            '<button type="button" class="entry-btn danger" data-action="hapus-permanen" data-id="' + escapeHtml(item.id) + '">Hapus Permanen</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    document.getElementById('sampahList').addEventListener('click', function(ev) {
+      const btn = ev.target.closest('button[data-action]');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      const action = btn.getAttribute('data-action');
+
+      if (action === 'pulihkan') {
+        btn.disabled = true;
+        btn.textContent = 'Memulihkan…';
+        callApi('pulihkanJurnal', { id: id }).then(function() {
+          muatSampah();
+          muatRiwayat();
+          cekPengingatHariIni();
+        }).catch(function(err) {
+          btn.disabled = false;
+          btn.textContent = '↩️ Pulihkan';
+          alert('Gagal memulihkan: ' + err.message);
+        });
+      } else if (action === 'hapus-permanen') {
+        if (!confirm('Yakin hapus PERMANEN? Data ini tidak akan bisa dipulihkan lagi setelah ini.')) return;
+        callApi('hapusSampahPermanen', { id: id }).then(function() {
+          muatSampah();
+        }).catch(function(err) {
+          alert('Gagal menghapus permanen: ' + err.message);
+        });
+      }
+    });
+
+    document.getElementById('btnKosongkanSampah').addEventListener('click', function() {
+      if (!sampahData || !sampahData.length) return;
+      if (!confirm('Yakin KOSONGKAN semua sampah secara permanen? Semua data di dalamnya akan hilang selamanya dan tidak bisa dipulihkan.')) return;
+      callApi('kosongkanSampah').then(function() {
+        muatSampah();
+      }).catch(function(err) {
+        alert('Gagal mengosongkan sampah: ' + err.message);
+      });
+    });
+
     document.getElementById('riwayatList').addEventListener('click', function(ev) {
       const btn = ev.target.closest('button[data-action]');
       if (!btn) return;
@@ -1243,12 +1329,14 @@
     document.getElementById('btnBatalEdit').addEventListener('click', resetForm);
 
     function hapusJurnalUI(id) {
-      if (!confirm('Yakin hapus jurnal ini? Data absensi terkait juga akan terhapus, dan tidak bisa dikembalikan.')) return;
+      if (!confirm('Hapus jurnal ini? Data akan dipindah ke Sampah dulu, masih bisa dipulihkan lewat menu Sampah di tab ini.')) return;
       callApi('hapusJurnal', { id: id }).then(function() {
         riwayatData = riwayatData.filter(function(e) { return e.id !== id; });
         renderRiwayatFiltered();
         if (editingId === id) resetForm();
         cekPengingatHariIni();
+        sampahData = null;
+        if (document.getElementById('sampahSection').style.display === 'block') muatSampah();
       }).catch(function(err) {
         alert('Gagal menghapus: ' + err.message);
       });
