@@ -479,6 +479,22 @@
       pointer-events: none;
     }
 
+    .copy-last-btn {
+      margin-top: 8px;
+      background: none;
+      border: 1px dashed var(--rule);
+      color: var(--accent-dark);
+      font-size: 12.5px;
+      padding: 7px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .copy-last-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
     @media print {
       header, nav.tabs, .action-bar, #btnTampilkanRekap, .print-btn { display: none !important; }
       body { background: #fff; }
@@ -643,6 +659,8 @@
 
       <label for="kelas">Kelas</label>
       <select id="kelas"><option value="">Memuat…</option></select>
+
+      <button type="button" id="btnSalinTerakhir" class="copy-last-btn" style="display:none;">🔁 Salin dari jurnal terakhir kelas ini</button>
 
       <label>Jam ke- <span style="font-weight:400;color:var(--muted);">(isi "sampai" hanya jika KBM lebih dari 1 JP)</span></label>
       <div class="row2">
@@ -913,10 +931,13 @@
       const info = daftarKelas.find(k => k.kelas === kelas);
       document.getElementById('mapel').value = info ? info.mapel : '';
       const listEl = document.getElementById('siswaList');
+      const btnSalin = document.getElementById('btnSalinTerakhir');
       if (!kelas) {
         listEl.innerHTML = '<p class="empty-hint">Pilih kelas dahulu untuk memuat daftar siswa.</p>';
+        btnSalin.style.display = 'none';
         return;
       }
+      btnSalin.style.display = editingId ? 'none' : 'inline-block';
       listEl.innerHTML = '<p class="loading">Memuat siswa…</p>';
       callApi('getSiswaByKelas', { kelas: kelas }).then(function(siswa) {
         renderSiswa(siswa);
@@ -924,6 +945,32 @@
         listEl.innerHTML = '<p class="empty-hint">Gagal memuat siswa: ' + escapeHtml(err.message) + '</p>';
       });
       updateJadwalSuggest();
+    });
+
+    document.getElementById('btnSalinTerakhir').addEventListener('click', function() {
+      const kelas = document.getElementById('kelas').value;
+      if (!kelas) return;
+      const btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Memuat…';
+      callApi('getJurnalTerakhir', { kelas: kelas }).then(function(data) {
+        btn.disabled = false;
+        btn.textContent = '🔁 Salin dari jurnal terakhir kelas ini';
+        if (!data) {
+          alert('Belum ada jurnal sebelumnya untuk kelas ini.');
+          return;
+        }
+        const parsed = parseJamKe(data.jamKe);
+        document.getElementById('jamDari').value = parsed.dari;
+        document.getElementById('jamSampai').value = parsed.sampai;
+        document.getElementById('mapel').value = data.mapel;
+        document.getElementById('materi').value = data.materi;
+        updateJadwalSuggest();
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.textContent = '🔁 Salin dari jurnal terakhir kelas ini';
+        alert('Gagal memuat jurnal terakhir: ' + err.message);
+      });
     });
 
     function renderSiswa(siswa) {
@@ -1145,6 +1192,7 @@
         document.getElementById('mapel').value = detail.mapel;
         document.getElementById('materi').value = detail.materi;
         document.getElementById('kelas').value = detail.kelas;
+        document.getElementById('btnSalinTerakhir').style.display = 'none';
 
         const listEl = document.getElementById('siswaList');
         listEl.innerHTML = '<p class="loading">Memuat siswa…</p>';
@@ -1188,6 +1236,7 @@
       document.getElementById('jamDari').value = '';
       document.getElementById('jamSampai').value = '';
       document.getElementById('materi').value = '';
+      document.getElementById('btnSalinTerakhir').style.display = 'none';
       document.getElementById('siswaList').innerHTML = '<p class="empty-hint">Pilih kelas dahulu untuk memuat daftar siswa.</p>';
       updateJadwalSuggest();
     }
