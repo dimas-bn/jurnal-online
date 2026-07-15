@@ -230,6 +230,49 @@
     }
     .ket-input.show { display: block; }
 
+    .poin-stepper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .poin-label {
+      font-size: 11.5px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-right: 2px;
+    }
+    .poin-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1px solid var(--rule);
+      background: #fff;
+      color: var(--accent-dark);
+      font-size: 15px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .poin-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+    .poin-val {
+      min-width: 22px;
+      text-align: center;
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--ink);
+    }
+    .poin-val.poin-up { color: var(--accent); }
+    .poin-val.poin-down { color: var(--red); }
+
     .empty-hint {
       font-size: 13px;
       color: var(--muted);
@@ -593,6 +636,8 @@
       border-radius: 20px;
       flex-shrink: 0;
     }
+    .absen-list-item .total-badge.poin-badge-up { background: var(--accent); }
+    .absen-list-item .total-badge.poin-badge-down { background: var(--brick); }
 
     @media (max-width: 380px) {
       .page { padding: 18px 14px 18px 34px; }
@@ -820,6 +865,9 @@
     }
 
     const HARI_ID = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    const POIN_DEFAULT = 3;
+    const POIN_MIN_CONST = 0;
+    const POIN_MAX_CONST = 7;
     const BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
     let daftarKelas = [];
     let jadwalData = [];
@@ -997,6 +1045,12 @@
             }).join('') +
           '</div>' +
           '<input type="text" class="ket-input" placeholder="Keterangan (opsional)">' +
+          '<div class="poin-stepper">' +
+            '<span class="poin-label">Poin</span>' +
+            '<button type="button" class="poin-btn poin-minus" aria-label="Kurangi poin">−</button>' +
+            '<span class="poin-val" data-poin="' + POIN_DEFAULT + '">' + POIN_DEFAULT + '</span>' +
+            '<button type="button" class="poin-btn poin-plus" aria-label="Tambah poin">+</button>' +
+          '</div>' +
         '</div>';
       }).join('');
 
@@ -1013,6 +1067,26 @@
             ketInput.classList.toggle('show', r.value !== 'Hadir');
           });
         });
+
+        const poinVal = item.querySelector('.poin-val');
+        const btnMinus = item.querySelector('.poin-minus');
+        const btnPlus = item.querySelector('.poin-plus');
+        function updatePoinUI() {
+          const v = Number(poinVal.getAttribute('data-poin'));
+          poinVal.textContent = v;
+          poinVal.className = 'poin-val' + (v > POIN_DEFAULT ? ' poin-up' : v < POIN_DEFAULT ? ' poin-down' : '');
+          btnMinus.disabled = v <= POIN_MIN_CONST;
+          btnPlus.disabled = v >= POIN_MAX_CONST;
+        }
+        btnMinus.addEventListener('click', function() {
+          const v = Number(poinVal.getAttribute('data-poin'));
+          if (v > POIN_MIN_CONST) { poinVal.setAttribute('data-poin', v - 1); updatePoinUI(); }
+        });
+        btnPlus.addEventListener('click', function() {
+          const v = Number(poinVal.getAttribute('data-poin'));
+          if (v < POIN_MAX_CONST) { poinVal.setAttribute('data-poin', v + 1); updatePoinUI(); }
+        });
+        updatePoinUI();
       });
     }
 
@@ -1045,10 +1119,12 @@
       const siswaItems = document.querySelectorAll('#siswaList .siswa-item');
       const siswa = Array.from(siswaItems).map(function(item) {
         const checked = item.querySelector('input[type=radio]:checked');
+        const poinEl = item.querySelector('.poin-val');
         return {
           nama: item.getAttribute('data-nama'),
           status: checked ? checked.value : 'Hadir',
-          keterangan: item.querySelector('.ket-input').value
+          keterangan: item.querySelector('.ket-input').value,
+          poin: poinEl ? Number(poinEl.getAttribute('data-poin')) : POIN_DEFAULT
         };
       });
 
@@ -1310,6 +1386,16 @@
         if (info.keterangan) {
           item.querySelector('.ket-input').value = info.keterangan;
         }
+        if (info.poin !== undefined && info.poin !== null) {
+          const poinVal = item.querySelector('.poin-val');
+          if (poinVal) {
+            poinVal.setAttribute('data-poin', info.poin);
+            poinVal.textContent = info.poin;
+            poinVal.className = 'poin-val' + (info.poin > POIN_DEFAULT ? ' poin-up' : info.poin < POIN_DEFAULT ? ' poin-down' : '');
+            item.querySelector('.poin-minus').disabled = info.poin <= POIN_MIN_CONST;
+            item.querySelector('.poin-plus').disabled = info.poin >= POIN_MAX_CONST;
+          }
+        }
       });
     }
 
@@ -1400,13 +1486,14 @@
           '<td>' + s.Dispensasi + '</td>' +
           '<td>' + s.Alpa + '</td>' +
           '<td>' + persenHadir + '%</td>' +
+          '<td>' + (s.rataPoin !== undefined ? s.rataPoin : '-') + '</td>' +
         '</tr>';
       }).join('');
 
       resultEl.innerHTML =
         '<p class="rekap-summary">' + escapeHtml(data.kelas) + ' — ' + namaBulan + ' ' + data.tahun + ' · Total pertemuan: ' + data.totalPertemuan + ' kali</p>' +
         '<div class="rekap-table-wrap"><table class="rekap-table"><thead><tr>' +
-          '<th>No</th><th>Nama</th><th>H</th><th>I</th><th>S</th><th>D</th><th>A</th><th>% Hadir</th>' +
+          '<th>No</th><th>Nama</th><th>H</th><th>I</th><th>S</th><th>D</th><th>A</th><th>% Hadir</th><th>Rata² Poin</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
         '<button type="button" class="print-btn" onclick="window.print()">🖨️ Cetak / Simpan sebagai PDF</button>';
     }
@@ -1480,7 +1567,33 @@
             '</div>';
           }).join('');
 
-      resultEl.innerHTML = cardsHtml + barsHtml + topHtml;
+      const poinTertinggiHtml = !data.topPoinTertinggi.length ? '' :
+        '<p class="stat-section-title">⭐ Poin tertinggi</p>' +
+        data.topPoinTertinggi.map(function(s, i) {
+          return '<div class="absen-list-item">' +
+            '<span class="rank">#' + (i + 1) + '</span>' +
+            '<span class="nama-kelas">' + escapeHtml(s.nama) + '<br><span class="kelas-kecil">' + escapeHtml(s.kelas) +
+              ' · ' + s.jumlahTercatat + 'x disesuaikan</span></span>' +
+            '<span class="total-badge poin-badge-up">' + s.rataPoin + '</span>' +
+          '</div>';
+        }).join('');
+
+      const poinTerendahHtml = !data.topPoinTerendah.length ? '' :
+        '<p class="stat-section-title">📉 Poin terendah</p>' +
+        data.topPoinTerendah.map(function(s, i) {
+          return '<div class="absen-list-item">' +
+            '<span class="rank">#' + (i + 1) + '</span>' +
+            '<span class="nama-kelas">' + escapeHtml(s.nama) + '<br><span class="kelas-kecil">' + escapeHtml(s.kelas) +
+              ' · ' + s.jumlahTercatat + 'x disesuaikan</span></span>' +
+            '<span class="total-badge poin-badge-down">' + s.rataPoin + '</span>' +
+          '</div>';
+        }).join('');
+
+      const poinInfoKosong = (!data.topPoinTertinggi.length && !data.topPoinTerendah.length)
+        ? '<p class="stat-section-title">Poin siswa</p><p class="empty-hint">Belum ada penyesuaian poin pada periode ini — semua siswa masih di poin default (3).</p>'
+        : '';
+
+      resultEl.innerHTML = cardsHtml + barsHtml + topHtml + poinTertinggiHtml + poinTerendahHtml + poinInfoKosong;
     }
 
     function muatLinkExport() {
