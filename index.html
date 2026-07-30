@@ -512,6 +512,20 @@
       font-family: 'IBM Plex Sans', sans-serif;
     }
 
+    .rekap-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .rekap-actions .print-btn { margin-top: 18px; }
+    .geletek-btn {
+      background: var(--slate);
+    }
+    .geletek-btn:disabled {
+      opacity: 0.7;
+      cursor: default;
+    }
+
     .export-link {
       display: inline-block;
       text-decoration: none;
@@ -539,7 +553,7 @@
     }
 
     @media print {
-      header, nav.tabs, .action-bar, #btnTampilkanRekap, .print-btn { display: none !important; }
+      header, nav.tabs, .action-bar, #btnTampilkanRekap, .print-btn, .rekap-actions { display: none !important; }
       body { background: #fff; }
       main { padding: 0; max-width: 100%; }
       .page { box-shadow: none; background: #fff; }
@@ -1495,7 +1509,28 @@
         '<div class="rekap-table-wrap"><table class="rekap-table"><thead><tr>' +
           '<th>No</th><th>Nama</th><th>H</th><th>I</th><th>S</th><th>D</th><th>A</th><th>% Hadir</th><th>Rata² Poin</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
-        '<button type="button" class="print-btn" onclick="window.print()">🖨️ Cetak / Simpan sebagai PDF</button>';
+        '<div class="rekap-actions">' +
+          '<button type="button" class="print-btn" onclick="window.print()">🖨️ Cetak / Simpan sebagai PDF</button>' +
+          '<button type="button" class="print-btn geletek-btn" id="btnKirimGeletek">🚀 Kirim Poin ke GELETEK</button>' +
+        '</div>';
+
+      document.getElementById('btnKirimGeletek').addEventListener('click', function() {
+        kirimKeGeletek(data.kelas, data.bulan, data.tahun, this);
+      });
+    }
+
+    function kirimKeGeletek(kelas, bulan, tahun, btn) {
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Mengirim…';
+      callApi('kirimPoinKeGeletek', { kelas: kelas, bulan: bulan, tahun: tahun }).then(function() {
+        btn.textContent = '✅ Terkirim ke GELETEK!';
+        setTimeout(function() { btn.disabled = false; btn.textContent = originalText; }, 3000);
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        alert('Gagal kirim ke GELETEK: ' + err.message);
+      });
     }
 
     function initStatFilter() {
