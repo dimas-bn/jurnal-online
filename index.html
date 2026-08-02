@@ -382,6 +382,45 @@
     }
     .no-match { font-size: 13px; color: var(--muted); font-style: italic; padding: 10px 0; }
 
+    .catatan-box {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: #FFF6D8;
+      border: 1px solid #E8D98A;
+      border-radius: 6px;
+    }
+    .catatan-label {
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #8A7220;
+      margin: 0 0 8px;
+    }
+    .catatan-text {
+      font-size: 13.5px;
+      color: var(--ink);
+      white-space: pre-wrap;
+      line-height: 1.5;
+      margin: 0 0 10px;
+    }
+    .catatan-input {
+      width: 100%;
+      min-height: 80px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 16px;
+      padding: 8px 10px;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      margin-bottom: 10px;
+      resize: vertical;
+    }
+    .catatan-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .jadwal-suggest {
       margin-top: 14px;
       padding: 10px 12px;
@@ -721,6 +760,18 @@
 
       <button type="button" id="btnSalinTerakhir" class="copy-last-btn" style="display:none;">🔁 Salin dari jurnal terakhir kelas ini</button>
 
+      <div id="catatanBox" class="catatan-box" style="display:none;">
+        <p class="catatan-label">📝 Catatan Persiapan</p>
+        <div id="catatanView"></div>
+        <textarea id="catatanInput" class="catatan-input" style="display:none;" placeholder="Tulis catatan/pegangan materi untuk kelas & tanggal ini..."></textarea>
+        <div class="catatan-actions">
+          <button type="button" id="btnEditCatatan" class="entry-btn">+ Tambah Catatan</button>
+          <button type="button" id="btnSimpanCatatan" class="entry-btn" style="display:none;">💾 Simpan</button>
+          <button type="button" id="btnBatalCatatan" class="entry-btn" style="display:none;">Batal</button>
+          <button type="button" id="btnHapusCatatan" class="entry-btn danger" style="display:none;">Hapus</button>
+        </div>
+      </div>
+
       <label>Jam ke- <span style="font-weight:400;color:var(--muted);">(isi "sampai" hanya jika KBM lebih dari 1 JP)</span></label>
       <div class="row2">
         <div>
@@ -861,7 +912,7 @@
     // Sebagai gantinya, panggil endpoint /api di domain sendiri, yang diteruskan oleh worker.js ke Apps Script.
     const APPS_SCRIPT_URL = '/api';
     // Harus SAMA PERSIS dengan API_KEY yang ada di Code.gs
-    const API_KEY = 'dimest85haysnaidrun';
+    const API_KEY = 'DimasBagusNurdiansyah';
     // ====================================================
 
     function callApi(action, extra) {
@@ -909,6 +960,7 @@
       document.getElementById('lblHari').textContent =
         HARI_ID[d.getDay()] + ', ' + d.getDate() + ' ' + BULAN_ID[d.getMonth()] + ' ' + d.getFullYear();
       updateJadwalSuggest();
+      muatCatatan();
     }
 
     function muatJadwal() {
@@ -919,6 +971,90 @@
         console.error('Gagal memuat jadwal:', err);
       });
     }
+
+    let catatanState = { kelas: null, tanggal: null, teks: '' };
+
+    function muatCatatan() {
+      const kelas = document.getElementById('kelas').value;
+      const tanggal = document.getElementById('tanggal').value;
+      const box = document.getElementById('catatanBox');
+      if (!kelas || !tanggal) { box.style.display = 'none'; return; }
+
+      box.style.display = 'block';
+      toggleCatatanEditMode(false);
+      document.getElementById('catatanView').innerHTML = '<p class="loading">Memuat catatan…</p>';
+
+      callApi('getCatatan', { kelas: kelas, tanggal: tanggal }).then(function(res) {
+        catatanState = { kelas: kelas, tanggal: tanggal, teks: res ? res.catatan : '' };
+        renderCatatanView();
+      }).catch(function(err) {
+        document.getElementById('catatanView').innerHTML = '<p class="empty-hint">Gagal memuat catatan: ' + escapeHtml(err.message) + '</p>';
+      });
+    }
+
+    function renderCatatanView() {
+      const viewEl = document.getElementById('catatanView');
+      const btnEdit = document.getElementById('btnEditCatatan');
+      const btnHapus = document.getElementById('btnHapusCatatan');
+      if (catatanState.teks) {
+        viewEl.innerHTML = '<p class="catatan-text">' + escapeHtml(catatanState.teks) + '</p>';
+        btnEdit.textContent = '✏️ Edit Catatan';
+        btnHapus.style.display = 'inline-block';
+      } else {
+        const d = new Date(catatanState.tanggal + 'T00:00:00');
+        viewEl.innerHTML = '<p class="empty-hint">Belum ada catatan untuk ' + escapeHtml(catatanState.kelas) +
+          ', ' + d.getDate() + ' ' + BULAN_ID[d.getMonth()] + ' ' + d.getFullYear() + '.</p>';
+        btnEdit.textContent = '+ Tambah Catatan';
+        btnHapus.style.display = 'none';
+      }
+    }
+
+    function toggleCatatanEditMode(editing) {
+      document.getElementById('catatanView').style.display = editing ? 'none' : 'block';
+      document.getElementById('catatanInput').style.display = editing ? 'block' : 'none';
+      document.getElementById('btnEditCatatan').style.display = editing ? 'none' : 'inline-block';
+      document.getElementById('btnSimpanCatatan').style.display = editing ? 'inline-block' : 'none';
+      document.getElementById('btnBatalCatatan').style.display = editing ? 'inline-block' : 'none';
+      document.getElementById('btnHapusCatatan').style.display = (editing || !catatanState.teks) ? 'none' : 'inline-block';
+      if (editing) document.getElementById('catatanInput').value = catatanState.teks;
+    }
+
+    document.getElementById('btnEditCatatan').addEventListener('click', function() {
+      toggleCatatanEditMode(true);
+    });
+
+    document.getElementById('btnBatalCatatan').addEventListener('click', function() {
+      toggleCatatanEditMode(false);
+    });
+
+    document.getElementById('btnSimpanCatatan').addEventListener('click', function() {
+      const teks = document.getElementById('catatanInput').value;
+      const btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan…';
+      callApi('simpanCatatan', { kelas: catatanState.kelas, tanggal: catatanState.tanggal, teks: teks }).then(function() {
+        catatanState.teks = teks.trim();
+        btn.disabled = false;
+        btn.textContent = '💾 Simpan';
+        toggleCatatanEditMode(false);
+        renderCatatanView();
+      }).catch(function(err) {
+        btn.disabled = false;
+        btn.textContent = '💾 Simpan';
+        alert('Gagal menyimpan catatan: ' + err.message);
+      });
+    });
+
+    document.getElementById('btnHapusCatatan').addEventListener('click', function() {
+      if (!confirm('Hapus catatan untuk kelas & tanggal ini?')) return;
+      callApi('simpanCatatan', { kelas: catatanState.kelas, tanggal: catatanState.tanggal, teks: '' }).then(function() {
+        catatanState.teks = '';
+        toggleCatatanEditMode(false);
+        renderCatatanView();
+      }).catch(function(err) {
+        alert('Gagal menghapus catatan: ' + err.message);
+      });
+    });
 
     function cekPengingatHariIni() {
       callApi('getJadwalBelumDiisi', {}).then(function(list) {
@@ -1003,6 +1139,7 @@
       if (!kelas) {
         listEl.innerHTML = '<p class="empty-hint">Pilih kelas dahulu untuk memuat daftar siswa.</p>';
         btnSalin.style.display = 'none';
+        muatCatatan();
         return;
       }
       btnSalin.style.display = editingId ? 'none' : 'inline-block';
@@ -1013,6 +1150,7 @@
         listEl.innerHTML = '<p class="empty-hint">Gagal memuat siswa: ' + escapeHtml(err.message) + '</p>';
       });
       updateJadwalSuggest();
+      muatCatatan();
     });
 
     document.getElementById('btnSalinTerakhir').addEventListener('click', function() {
@@ -1369,6 +1507,7 @@
         document.getElementById('materi').value = detail.materi;
         document.getElementById('kelas').value = detail.kelas;
         document.getElementById('btnSalinTerakhir').style.display = 'none';
+        muatCatatan();
 
         const listEl = document.getElementById('siswaList');
         listEl.innerHTML = '<p class="loading">Memuat siswa…</p>';
@@ -1425,6 +1564,7 @@
       document.getElementById('btnSalinTerakhir').style.display = 'none';
       document.getElementById('siswaList').innerHTML = '<p class="empty-hint">Pilih kelas dahulu untuk memuat daftar siswa.</p>';
       updateJadwalSuggest();
+      muatCatatan();
     }
     document.getElementById('btnBatalEdit').addEventListener('click', resetForm);
 
