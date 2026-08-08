@@ -564,6 +564,13 @@
       opacity: 0.7;
       cursor: default;
     }
+    .geletek-note {
+      font-size: 11.5px;
+      color: var(--muted);
+      font-style: italic;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
 
     .export-link {
       display: inline-block;
@@ -1652,18 +1659,19 @@
         '<div class="rekap-actions">' +
           '<button type="button" class="print-btn" onclick="window.print()">🖨️ Cetak / Simpan sebagai PDF</button>' +
           '<button type="button" class="print-btn geletek-btn" id="btnKirimGeletek">🚀 Kirim Poin ke GELETEK</button>' +
-        '</div>';
+        '</div>' +
+        '<p class="geletek-note">Catatan: yang dikirim ke GELETEK adalah rata-rata poin <strong>akumulasi sejak awal</strong> untuk kelas ini (bukan cuma bulan ' + namaBulan + ' yang sedang ditampilkan).</p>';
 
       document.getElementById('btnKirimGeletek').addEventListener('click', function() {
-        kirimKeGeletek(data.kelas, data.bulan, data.tahun, this);
+        kirimKeGeletek(data.kelas, this);
       });
     }
 
-    function kirimKeGeletek(kelas, bulan, tahun, btn) {
+    function kirimKeGeletek(kelas, btn) {
       const originalText = btn.textContent;
       btn.disabled = true;
       btn.textContent = 'Mengirim…';
-      callApi('kirimPoinKeGeletek', { kelas: kelas, bulan: bulan, tahun: tahun }).then(function() {
+      callApi('kirimPoinKeGeletek', { kelas: kelas }).then(function() {
         btn.textContent = '✅ Terkirim ke GELETEK!';
         setTimeout(function() { btn.disabled = false; btn.textContent = originalText; }, 3000);
       }).catch(function(err) {
